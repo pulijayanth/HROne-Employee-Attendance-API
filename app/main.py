@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
+from pymongo.errors import DuplicateKeyError, PyMongoError
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pymongo import MongoClient
@@ -25,6 +26,30 @@ db = client[os.getenv("MONGO_DB", "attendance_db")]
 IST = timezone(timedelta(hours=5, minutes=30))
 
 app = FastAPI(title="Employee Attendance & Analytics API", version="2.0.0")
+
+@app.on_event("startup")
+def create_indexes():
+    db.employees.create_index(
+        [("emp_code", 1)],
+        unique=True,
+        name="uq_employees_emp_code",
+    )
+
+    db.attendance_logs.create_index(
+        [("emp_code", 1), ("date", 1)],
+        unique=True,
+        name="uq_attendance_emp_code_date",
+    )
+
+    db.attendance_logs.create_index(
+        [("date", -1)],
+        name="ix_attendance_date_desc",
+    )
+
+    db.attendance_logs.create_index(
+        [("emp_code", 1), ("date", -1)],
+        name="ix_attendance_emp_date_desc",
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -71,7 +96,14 @@ class PunchInIn(BaseModel):
 # --------------------------------------------------------------------------- #
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    try:
+        client.admin.command("ping")
+        return {"status": "ok"}
+    except PyMongoError:
+        raise HTTPException(
+            status_code=503,
+            detail="MongoDB is unavailable",
+        )
 
 
 @app.post("/employees", status_code=201)
