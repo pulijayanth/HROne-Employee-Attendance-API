@@ -384,6 +384,12 @@ def punch_out(body: PunchOutIn):
     if ts <= punch_in_at:
         raise HTTPException(422, "Punch-out must be after punch-in")
 
+    if ts - punch_in_at > timedelta(hours=24):
+        raise HTTPException(
+            status_code=422,
+            detail="Attendance duration cannot exceed 24 hours",
+        )
+
     work_hours = compute_work_hours(punch_in_at, ts)
 
     overtime_minutes = compute_overtime(
@@ -1007,10 +1013,10 @@ def late_leaderboard(
             detail="month must use YYYY-MM format",
         )
 
-    if limit < 1 or limit > 100:
+    if limit < 1 or limit > 50:
         raise HTTPException(
             status_code=422,
-            detail="limit must be between 1 and 100",
+            detail="limit must be between 1 and 50",
         )
 
     year, month_number = month_start.year, month_start.month
@@ -1677,8 +1683,8 @@ def explain_endpoint(
 
     if endpoint == "late_leaderboard":
         start, end = get_month_range(month)
-        if limit < 1 or limit > 100:
-            raise HTTPException(422, "limit must be between 1 and 100")
+        if limit < 1 or limit > 50:
+            raise HTTPException(422, "limit must be between 1 and 50")
 
         pipeline = [
             {"$match": {"date": {"$gte": start, "$lte": end}}},
