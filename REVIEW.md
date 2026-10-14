@@ -1,9 +1,30 @@
 # REVIEW.md
 
-List every defect you found in the starter `app/main.py` (helpers and endpoints). For each one:
+I reviewed the starter implementation in `app/main.py` against the API contract and attendance rules. I checked the calculation helpers, request validation, database operations, pagination, and required endpoints. The findings below describe defects in the original starter, not the changes introduced while completing the assignment.
 
-| # | Where (function / line) | What is wrong | How you'd notice it (test, input, or symptom) | How you fixed it |
+| # | Where | What was wrong | How I reproduced it or identified it | How I fixed it |
 |---|---|---|---|---|
-| 1 | | | | |
+| 1 | `compute_late_minutes()` | The 10-minute grace-period check was applied after converting elapsed time to whole minutes. A punch-in just after the grace period could incorrectly be treated as on time. | For a 09:30 shift, a punch-in at 09:40:01 returned 0 instead of 10. | Checked the elapsed seconds against the grace period before calculating whole late minutes. |
+| 2 | `PunchInIn` and `PunchOutIn` | Timestamp validation did not enforce the contract's epoch-millisecond type and range. | The original models accepted seconds-based integers, numeric strings, and out-of-range integers. | Added strict integer validation and the permitted epoch-millisecond bounds. |
+| 3 | End of `app/main.py` | Several required routes were left as TODOs, including punch-out, attendance correction, analytics, and explain. | Inspected the original starter and confirmed that these routes were listed as TODOs rather than implemented. | Implemented the missing routes in the completed application. |
+| 4 | `compute_work_hours()` | Built-in `round()` does not guarantee the half-up rounding required by the contract. | At the 1.125-hour boundary, the original approach produced 1.12 rather than 1.13. | Used `Decimal` with `ROUND_HALF_UP`. |
+| 5 | `compute_overtime()` | The original helper counted any positive overtime, even when it was below the required 30-minute minimum. | A punch-out at 18:35 for a shift ending at 18:30 produced 5 minutes instead of 0. | Applied the minimum overtime threshold before recording overtime. |
+| 6 | `list_attendance()` | The original endpoint loaded every matching record into Python before sorting and slicing the requested page. This would scale poorly for large collections. | Inspected the original `find()` call, conversion to a list, Python sorting, and slicing. | Moved sorting and pagination into MongoDB and used `count_documents()` with the same filters. |
+| 7 | `list_employees()` | The employee list did not guarantee the contract's required `emp_code` ascending order. | The original MongoDB query used `skip()` and `limit()` without a sort. | Added ascending `emp_code` sorting before pagination. |
+| 8 | `list_attendance()` | The original endpoint sorted only by date descending and omitted the required `emp_code` ascending secondary sort. | Inspected the original Python sort, which used only the date field. | Added both sort keys: date descending and employee code ascending. |
+| 9 | `health()` | The original health endpoint always returned success without checking whether MongoDB was reachable. | Inspected the endpoint and confirmed it returned `{"status": "ok"}` without a database operation. | Added a MongoDB ping and a 503 response when the database check fails. |
+| 10 | Employee creation endpoint | Checking for an existing employee before inserting is not sufficient to prevent simultaneous duplicate requests. | The original code performed `find_one()` followed by `insert_one()` without handling the concurrent-insert race. | Added a unique employee-code index and handled duplicate-key errors as conflicts. |
+| 11 | Punch-in endpoint | An unknown employee could cause an unhandled error because the original code used the employee document without first checking whether it existed. | Inspected the original employee lookup and subsequent access to employee fields. | Return 404 when the employee does not exist. |
+| 12 | `EmployeeIn` | The original request model did not enforce the employee-field validation rules, including employee-code format, valid shift times, valid joining date, and different shift start/end times. | Inspected the original model, which declared plain string fields without the required validators. | Added validation for the required formats and field constraints. |
+| 13 | Punch-in request model | The original punch-in model accepted arbitrary status strings rather than restricting status to the allowed values. | The original model declared `status` as a plain string, so an unsupported value such as `ABSENT` was not rejected by the model. | Restricted status to the values permitted by the API contract. |
+| 14 | Punch-in timestamp handling | The original implementation did not consistently normalize punch-in timestamps to whole seconds before calculating and storing attendance values. | Inspected the original timestamp conversion, which retained fractional seconds. | Normalized timestamps to whole seconds before applying attendance calculations. |
+| 15 | `list_attendance()` | The original endpoint did not enforce the contract's pagination bounds. | Inspected the original parameters and found no equivalent checks for `page >= 1` and `1 <= page_size <= 100`. | Added validation so invalid pagination values return 422. |
+| 16 | Employee creation response and storage | The original implementation used a naive local `datetime` for `created_at` and returned the database document directly, rather than consistently representing the API timestamp as epoch milliseconds. | Inspected the original `datetime.now()` assignment and direct response. | Stored a UTC-aware datetime and serialized the API value as epoch milliseconds. |
 
-Also note anything you looked at and decided was **not** a defect, and why.
+
+## Other items checked
+
+- Employee pagination and filtered counts: the original employee-list endpoint applied the same filter to the count and retrieval queries. I did not record that behavior as a defect.
+- Attendance-list pagination performance and ordering are recorded separately because they concern different requirements: avoiding in-memory pagination and guaranteeing deterministic ordering.
+- The missing-endpoints finding groups routes that were absent from the starter. It does not claim that the original implementation of each missing route contained a separate calculation defect.
+- I treated findings as confirmed only where the original source or a reproducible test supported the issue. I would not count an item as a starter defect merely because it required additional implementation for the assignment.

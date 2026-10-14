@@ -1,4 +1,3 @@
-@"
 .venv/
 venv/
 .env
@@ -8,4 +7,5 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .vscode/
-"@ | Set-Content .gitignore
+app/main.py.backup
+PROBLEM_STATEMENT.docx
