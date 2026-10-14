@@ -1,6 +1,6 @@
-﻿# Employee Attendance API
+# Employee Attendance API
 
-FastAPI and MongoDB implementation of the employee attendance API, including attendance operations, corrections, analytics, and query-plan inspection.
+A FastAPI and MongoDB implementation of an employee attendance API, including employee management, attendance operations, manual corrections, analytics, and MongoDB query-plan inspection.
 
 ## Requirements
 
@@ -10,35 +10,68 @@ FastAPI and MongoDB implementation of the employee attendance API, including att
 
 ## Setup (Windows PowerShell)
 
+Run these commands from the repository root.
+
+**1. Create and activate the virtual environment**
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+```
+
+**2. Install dependencies**
+
+```powershell
 python -m pip install -r requirements.txt
+```
+
+**3. Configure environment variables**
+
+```powershell
 Copy-Item .env.example .env
 ```
 
-Configure `MONGO_URI` and `MONGO_DB` in `.env` if needed. The defaults are `mongodb://localhost:27017` and `attendance_db`.
+Update `.env` if your MongoDB connection settings differ from the defaults:
 
-Ensure MongoDB is running, then start the API:
+```text
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB=attendance_db
+```
+
+**4. Start MongoDB**
+
+Ensure your local MongoDB service is running.
+
+**5. Start the API**
 
 ```powershell
 python -m uvicorn app.main:app --port 8000
 ```
 
-Open `http://127.0.0.1:8000/docs` to explore the API.
+Open the interactive API documentation at:
+
+http://127.0.0.1:8000/docs
 
 ## Tests
+
+Run the test suite from the repository root:
 
 ```powershell
 python -m pytest -q
 ```
 
-## Repository notes
+The current helper-test suite contains 14 passing tests. These cover attendance calculations, including late minutes, work hours, and overtime. They do not constitute full integration coverage of every API endpoint.
 
-- `app/main.py` contains the API implementation.
-- `openapi.yaml` describes the API contract.
-- `DATA_MODEL.md` documents the MongoDB data model.
-- `REVIEW.md` records reviewed starter-code defects.
-- `DECISIONS.md` documents implementation decisions.
+## Repository Structure
 
-Do not commit `.env`, credentials, or the original problem statement.
+- `app/main.py` — API implementation.
+- `openapi.yaml` — API contract.
+- `DATA_MODEL.md` — MongoDB data model.
+- `REVIEW.md` — Review of starter-code defects.
+- `DECISIONS.md` — Implementation decisions.
+
+## Security and Submission Notes
+
+- Do not commit `.env`, credentials, or other secrets.
+- Do not commit the original problem statement.
+- Use `.env.example` as the template for local configuration.
